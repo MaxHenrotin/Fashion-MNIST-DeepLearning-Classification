@@ -46,6 +46,8 @@ class MLP(nn.Module):
         #### WRITE YOUR CODE HERE!
         ###
         ##
+
+        self = self.model(x)
         return preds
 
 

@@ -87,7 +87,8 @@ def main(args):
     # Note: you might need to reshape the data depending on the network you use!
     n_classes = get_n_classes(ytrain)
     if args.nn_type == "mlp":
-        model = ... ### WRITE YOUR CODE HERE
+        input_size = xtrain.shape[1]
+        model = MLP(input_size=input_size, n_classes=n_classes)
 
     summary(model)
 
