@@ -1,4 +1,5 @@
 import argparse
+import random
 
 import numpy as np
 from torchinfo import summary
@@ -19,9 +20,12 @@ def main(args):
                           of this file). Their value can be accessed as "args.argument".
     """
     ## 1. First, we load our data and flatten the images into vectors
-    xtrain, xtest, ytrain = load_data(args.data_path)
-    xtrain = xtrain.reshape(xtrain.shape[0], -1)
-    xtest = xtest.reshape(xtest.shape[0], -1)
+    # xtrain = train_images (array): images of the train set, of shape (N,H,W) --> which will be reshaped to (N, V)
+    # ytrain = train_labels (array): labels of the train set, of shape (N,)
+    # xtest = test_images (array): images of the test set, of shape (N',H,W) --> which will be reshaped to (N', V)
+    xtrain, xtest, ytrain = load_data(args.data) 
+    xtrain = xtrain.reshape(xtrain.shape[0], -1)    #images are flatten to a vector
+    xtest = xtest.reshape(xtest.shape[0], -1)       #images are flatten to a vector
 
     ## 2. Then we must prepare it. This is were you can create a validation set,
     #  normalize, add bias, etc.
@@ -29,16 +33,50 @@ def main(args):
     # Make a validation set
     if not args.test:
     ### WRITE YOUR CODE HERE
-        print("Using PCA")
+
+        # Split the data into training and validation sets
+        split_ratio = 0.8  # 80% training, 20% validation #ARBITRARY
+
+        #mélange les datas
+        size = len(ytrain)  #(=len(xtrain))
+        pattern = [i for i in range(size)]
+        random.shuffle(pattern)
+
+        xtrain2 = np.empty_like(xtrain)
+        ytrain2 = np.empty_like(ytrain)
+
+        for i, p in enumerate(pattern):
+            xtrain2[p] = xtrain[i]
+            ytrain2[p] = ytrain[i]
+
+        #crée les validationSet
+        xtest = xtrain2[int(len(xtrain) * split_ratio):]
+        ytest = ytrain2[int(len(ytrain) * split_ratio):]    #on possède donc maintenant également un ytest pour faire nos tests grâce au validation set
+
+        #crée les trainingSet
+        xtrain = xtrain2[:int(len(xtrain) * split_ratio)]
+        ytrain = ytrain2[:int(len(ytrain) * split_ratio)]
 
     ### WRITE YOUR CODE HERE to do any other data processing
 
+    #normalisation
+    mu_train = np.mean(xtrain,0,keepdims=True)
+    std_train = np.std(xtrain,0,keepdims=True)
+    xtrain = normalize_fn(xtrain, mu_train, std_train)
+    xtest = normalize_fn(xtest, mu_train, std_train)
+
+    #biais appending
+    xtrain = append_bias_term(xtrain)
+    xtest = append_bias_term(xtest)
 
     # Dimensionality reduction (MS2)
     if args.use_pca:
         print("Using PCA")
         pca_obj = PCA(d=args.pca_d)
         ### WRITE YOUR CODE HERE: use the PCA object to reduce the dimensionality of the data
+        pca_obj.reduce_dimension(xtrain)
+        pca_obj.reduce_dimension(xtest)
+        #should obviously not do pca on ytrain/ytest (because it's only a label)
 
 
     ## 3. Initialize the method you want to use.
