@@ -85,10 +85,27 @@ def main(args):
 
     # Prepare the model (and data) for Pytorch
     # Note: you might need to reshape the data depending on the network you use!
-    n_classes = get_n_classes(ytrain)
+    input_channels = 1  # grayscale images
+    height, width = 28  # MNIST Image dimensions before flattening  # (= int(np.sqrt(xtrain.shape[1])))
+    n_classes = get_n_classes(ytrain)   #number of classes/labels (= 10)
+
     if args.nn_type == "mlp":
-        input_size = xtrain.shape[1]
-        model = MLP(input_size=input_size, n_classes=n_classes)
+        model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
+    if args.nn_type == "cnn":
+        #reshape xtrain + xtest to size (N, 1, 28, 28)
+        xtrain = xtrain.reshape(-1, input_channels, height, width)
+        xtest = xtest.reshape(-1, input_channels, height, width)
+        model = CNN(input_channels= input_channels ,n_classes=n_classes)  #because we work with black and white images (only one channel and not 3)
+    if args.nn_type == "transformer":
+        #reshape xtrain + xtest to size (N, 1, 28, 28)
+        xtrain = xtrain.reshape(-1, input_channels, height, width)
+        xtest = xtest.reshape(-1, input_channels, height, width)
+        n_patches = 7   #size of the patches that the image is divided into. each patch will be of size 4x4 (since 28/7=4). The number of patches in this case will be 49 (7x7). (7 is good for 28x28 images)
+        n_blocks = 2    #determines the depth of the Transformer, i.e., how many layers of Transformer blocks are stacked. (2 is good to start but could be bigger)
+        hidden_d = 8    #dimension of the hidden layers within the Transformer blocks (8 is good for 28x28 images)
+        n_heads = 2     #number of heads in the multi-head attention mechanism (2 is often a good balance between performance and computational complexity)
+        out_d = n_classes   
+        model = MyViT(chw= (input_channels, height, width), n_patches= n_patches, n_blocks= n_blocks, hidden_d= hidden_d, n_heads= n_heads, out_d= out_d)
 
     summary(model)
 
