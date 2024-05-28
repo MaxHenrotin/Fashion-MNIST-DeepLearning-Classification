@@ -65,10 +65,6 @@ def main(args):
     xtrain = normalize_fn(xtrain, mu_train, std_train)
     xtest = normalize_fn(xtest, mu_train, std_train)
 
-    #biais appending
-    xtrain = append_bias_term(xtrain)
-    xtest = append_bias_term(xtest)
-
     # Dimensionality reduction (MS2)
     if args.use_pca:
         pca_obj = PCA(d=args.pca_d)
@@ -77,6 +73,9 @@ def main(args):
         pca_obj.reduce_dimension(xtest)
         #should obviously not do pca on ytrain/ytest (because it's only a label)
 
+    #biais appending not necessary because pytorch does it itself
+    #xtrain = append_bias_term(xtrain)  #not necessary
+    #xtest = append_bias_term(xtest)    #not necessary
 
     ## 3. Initialize the method you want to use.
 
@@ -92,7 +91,7 @@ def main(args):
         model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
     if args.nn_type == "cnn":
         #reshape xtrain + xtest to size (N, 1, 28, 28)
-        xtrain = xtrain.reshape(-1, input_channels, height, width)
+        xtrain = xtrain.reshape(-1, input_channels, height, width)  
         xtest = xtest.reshape(-1, input_channels, height, width)
         model = CNN(input_channels= input_channels ,n_classes=n_classes)  #because we work with black and white images (only one channel and not 3)
     if args.nn_type == "transformer":
