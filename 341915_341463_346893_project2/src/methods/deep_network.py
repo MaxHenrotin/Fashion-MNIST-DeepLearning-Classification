@@ -13,7 +13,7 @@ class MLP(nn.Module):
     It should not use any convolutional layers.
     """
 
-    def __init__(self, input_size, n_classes):
+    def __init__(self, input_size, n_classes,hidden_sizes=[128, 64]):
         """
         Initialize the network.
         
@@ -25,11 +25,13 @@ class MLP(nn.Module):
             n_classes (int): number of classes to predict
         """
         super().__init__()
-        ##
-        ###
-        #### WRITE YOUR CODE HERE!
-        ###
-        ##
+        self.hidden_layers = nn.ModuleList()
+        prev_size = input_size
+        for hidden_size in hidden_sizes:
+            self.hidden_layers.append(nn.Linear(prev_size, hidden_size))
+            prev_size = hidden_size
+        self.output_layer = nn.Linear(prev_size, n_classes)
+
 
     def forward(self, x):
         """
@@ -47,7 +49,9 @@ class MLP(nn.Module):
         ###
         ##
 
-        self = self.model(x)
+        for layer in self.hidden_layers:
+            x = F.relu(layer(x))
+        preds = self.output_layer(x)
         return preds
 
 
