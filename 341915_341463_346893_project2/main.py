@@ -71,7 +71,6 @@ def main(args):
 
     # Dimensionality reduction (MS2)
     if args.use_pca:
-        print("Using PCA")
         pca_obj = PCA(d=args.pca_d)
         ### WRITE YOUR CODE HERE: use the PCA object to reduce the dimensionality of the data
         pca_obj.reduce_dimension(xtrain)
