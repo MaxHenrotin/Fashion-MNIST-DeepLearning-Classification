@@ -62,7 +62,7 @@ class CNN(nn.Module):
     It should use at least one convolutional layer.
     """
 
-    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = (16,32,64),pooling_kernel_size = 2, fc_size = 128, stride = 1):
+    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = (32,64),pooling_kernel_size = 2, fc_size = 128, stride = 1):
         """
         Initialize the network.
         
@@ -73,19 +73,21 @@ class CNN(nn.Module):
             input_channels (int): number of channels in the input
             n_classes (int): number of classes to predict
         """
-        super().__init__()
+        super(CNN,self).__init__()
         padding = (conv_kernel_size - 1) // 2 #division entière
         self.pooling_size = pooling_kernel_size
 
         self.conv1 = nn.Conv2d(input_channels,filters[0], kernel_size=conv_kernel_size, stride=stride, padding=padding)
         self.conv2 = nn.Conv2d(filters[0],filters[1], kernel_size=conv_kernel_size, stride=stride, padding=padding)
-        self.conv3 = nn.Conv2d(filters[1],filters[2], kernel_size=conv_kernel_size, stride=stride, padding=padding)
+        #self.conv3 = nn.Conv2d(filters[1],filters[2], kernel_size=conv_kernel_size, stride=stride, padding=padding)
 
-        number_of_pooling = 3
+        number_of_pooling = 2
         input_image_size = 28
         conv_image_size = input_image_size // (pooling_kernel_size**number_of_pooling) #division entière
-        self.fc1 = nn.Linear(filters[2] * conv_image_size * conv_image_size, fc_size)  
+        size_after_reshape = filters[1] * conv_image_size * conv_image_size
+        self.fc1 = nn.Linear(size_after_reshape, fc_size)  
         self.fc2 = nn.Linear(fc_size, n_classes)
+        #self.dropout = nn.Dropout(0.5)  # Dropout layer
 
     def forward(self, x):
         """
@@ -99,10 +101,13 @@ class CNN(nn.Module):
         """
         preds = F.max_pool2d(F.relu(self.conv1(x)), self.pooling_size)
         preds = F.max_pool2d(F.relu(self.conv2(preds)), self.pooling_size)
-        preds = F.max_pool2d(F.relu(self.conv3(preds)), self.pooling_size)
+        #preds = F.max_pool2d(F.relu(self.conv3(preds)), self.pooling_size)
         preds = preds.reshape((preds.shape[0], -1))
         preds = F.relu(self.fc1(preds))
-        return self.fc2(preds)
+        #preds = self.dropout(preds)
+        preds = self.fc2(preds)
+
+        return preds
 
 
 class MyViT(nn.Module):
@@ -163,7 +168,8 @@ class Trainer(object):
         self.batch_size = batch_size
 
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
 
     def train_all(self, dataloader):
         """
@@ -176,6 +182,7 @@ class Trainer(object):
             dataloader (DataLoader): dataloader for training data
         """
         for ep in range(self.epochs):
+            print(f"Epoch {ep+1}/{self.epochs}")
             self.train_one_epoch(dataloader, ep)
 
             ### WRITE YOUR CODE HERE if you want to do add something else at each epoch
@@ -196,7 +203,7 @@ class Trainer(object):
             outputs = self.model(inputs)
             loss = self.criterion(outputs, targets)
             loss.backward()
-            self.optimizer.step()
+            self.optimizer.step() 
 
 
     def predict_torch(self, dataloader):
