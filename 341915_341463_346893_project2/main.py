@@ -100,11 +100,13 @@ def main(args):
     if args.plotting : 
         print("Plotting")
         #lambdas = np.logspace(-3,1,num = 100,endpoint = True)
-        iters = np.array([1e-7,5e-7,1e-6,5e-6,1e-5,5e-5,1e-4,5e-4,1e-3,5e-3,1e-2,5e-2,1e-1,5e-1])
+        iters = np.array([1e-6,5e-6,1e-5,5e-5,1e-4,5e-4,1e-3,5e-3,1e-2,5e-2])
         #iters = np.array([1e-7,5e-7,1e-6,5e-6])
         accuracy_1 = np.zeros(len(iters))
 
-        model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
+        xtrain = xtrain.reshape(-1, input_channels, height, width)  
+        xtest = xtest.reshape(-1, input_channels, height, width)
+        model = CNN(1, n_classes=n_classes)
         summary(model)
 
 
@@ -112,7 +114,7 @@ def main(args):
 
             print("Lr : " + str(iters[i]))
 
-            method_obj = Trainer(model, lr=iters[i], epochs=55, batch_size=args.nn_batch_size)
+            method_obj = Trainer(model, lr=iters[i], epochs=1, batch_size=args.nn_batch_size)
             preds_train = method_obj.fit(xtrain, ytrain)
             preds = method_obj.predict(xtest)
             accuracy_1[i] = accuracy_fn(preds, ytest)
@@ -123,9 +125,9 @@ def main(args):
         max_acc = np.max(accuracy_1)
         plt.scatter(best_it,max_acc,label = f"best learning rate : lr = {best_it_formatted}, accuracy = {max_acc:.3f}%", color = 'r')
         # Tracer les données des deux tableaux
-        plt.plot(iters, accuracy_1, label='MLP',color = 'b')
+        plt.plot(iters, accuracy_1, label='CNN',color = 'b')
         # Set x-axis to log scale
-        #plt.xscale('log')
+        plt.xscale('log')
 
         # Configure the x-axis to display in scientific notation
         plt.gca().xaxis.set_major_formatter(ScalarFormatter())
@@ -138,7 +140,7 @@ def main(args):
     
         plt.xlabel('Learning Rate')
         plt.ylabel('Accuracy')
-        plt.title('Relation between learning rate and accuracy (max_iters = 55)')
+        plt.title('Relation between learning rate and accuracy (max_iters = 5)')
         plt.legend()
 
         # Afficher le graphe
