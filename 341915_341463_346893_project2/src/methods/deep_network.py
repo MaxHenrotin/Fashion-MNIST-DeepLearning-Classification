@@ -64,7 +64,7 @@ class CNN(nn.Module):
     It should use at least one convolutional layer.
     """
 
-    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = (32,64,128),pooling_kernel_size = 2, fc_size = 256, stride = 1):
+    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = (32,64),pooling_kernel_size = 2, fc_size = 128, stride = 1):
         """
         Initialize the network.
         
@@ -94,7 +94,7 @@ class CNN(nn.Module):
         size_after_reshape = filters[-1] * conv_image_size * conv_image_size
         self.fc1 = nn.Linear(size_after_reshape, fc_size)  
         self.fc2 = nn.Linear(fc_size, n_classes)
-        self.dropout = nn.Dropout(0.2)  # Dropout layer
+        #self.dropout = nn.Dropout(0.2)  # Dropout layer
 
     def forward(self, x):
         """
@@ -111,7 +111,7 @@ class CNN(nn.Module):
             preds = F.max_pool2d(F.relu(conv_layer(preds)), self.pooling_size)
         preds = preds.reshape((preds.shape[0], -1))
         preds = F.relu(self.fc1(preds))
-        preds = self.dropout(preds)
+        #preds = self.dropout(preds)
         preds = self.fc2(preds)
 
         return preds
@@ -137,18 +137,9 @@ def patchify(images, n_patches):
 
     return patches
 
+"""
 def get_positional_embeddings(sequence_length, d):
     #done by chatgpt
-    """
-    Generate sinusoidal positional embeddings for a sequence.
-    
-    Args:
-    sequence_length (int): the length of the sequence (number of patches + 1 for the class token).
-    d (int): the dimensionality of the embeddings.
-
-    Returns:
-    torch.Tensor: a sequence_length x d dimensional tensor of positional embeddings.
-    """
     position = torch.arange(sequence_length).unsqueeze(1)
     div_term = torch.exp(torch.arange(0, d, 2) * -(math.log(10000.0) / d))
     
@@ -157,6 +148,18 @@ def get_positional_embeddings(sequence_length, d):
     pe[:, 1::2] = torch.cos(position * div_term)
     
     return pe
+
+"""
+
+def get_positional_embeddings(sequence_length, hidden_dim):
+        # Initialize positional embeddings
+        positional_embeddings = torch.zeros(sequence_length, hidden_dim)
+        for pos in range(sequence_length):
+            for i in range(0, hidden_dim, 2):
+                positional_embeddings[pos, i] = math.sin(pos / (10000 ** (i / hidden_dim)))
+                positional_embeddings[pos, i + 1] = math.cos(pos / (10000 ** (i / hidden_dim)))
+        return positional_embeddings
+
     
 class MyMSA(nn.Module):
     def __init__(self, d, n_heads=2):
@@ -191,7 +194,7 @@ class MyMSA(nn.Module):
                 q, k, v = q_mapping(seq), k_mapping(seq), v_mapping(seq) ### WRITE YOUR CODE HERE
 
                 # Compute attention scores. (les 2 prochaines lignes sont faites par chat gpt)
-                attention_scores = (q @ k.transpose(-2, -1)) / (self.d_head ** 0.5)
+                attention_scores = (q @ k.T) / (self.d_head ** 0.5)
                 attention = self.softmax(attention_scores) ### WRITE YOUR CODE HERE
                 
                 seq_result.append(attention @ v)
@@ -293,7 +296,7 @@ class MyViT(nn.Module):
 
         # Add positional embedding.
         # HINT: use torch.Tensor.repeat(...)
-        out =  tokens + self.positional_embeddings.unsqueeze(0).expand_as(tokens) ### WRITE YOUR CODE HERE (line written by chatgpt)
+        out =  out = tokens + self.positional_embeddings.repeat(n, 1, 1) ### WRITE YOUR CODE HERE (line written by chatgpt)
 
         # Transformer Blocks
         for block in self.blocks:
@@ -306,8 +309,6 @@ class MyViT(nn.Module):
         out = self.mlp(out) ### WRITE YOUR CODE HERE
 
         return out
-        
-        return preds
 
 
 class Trainer(object):
@@ -333,8 +334,8 @@ class Trainer(object):
         self.batch_size = batch_size
 
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        #self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
+        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
 
     def train_all(self, dataloader):
         """
