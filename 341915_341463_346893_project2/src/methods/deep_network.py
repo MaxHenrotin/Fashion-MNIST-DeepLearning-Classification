@@ -135,7 +135,17 @@ def patchify(images, n_patches):
 
     return patches
 
+def get_positional_embeddings(sequence_length, hidden_dim):
+        # Initialize positional embeddings
+        positional_embeddings = torch.zeros(sequence_length, hidden_dim)
+        for pos in range(sequence_length):
+            for i in range(0, hidden_dim, 2):
+                positional_embeddings[pos, i] = math.sin(pos / (10000 ** (i / hidden_dim)))
+                positional_embeddings[pos, i + 1] = math.cos(pos / (10000 ** (i / hidden_dim)))
+        return positional_embeddings
+
 """
+#second version
 def get_positional_embeddings(sequence_length, d):
     position = torch.arange(sequence_length).unsqueeze(1)
     div_term = torch.exp(torch.arange(0, d, 2) * -(math.log(10000.0) / d))
@@ -147,16 +157,6 @@ def get_positional_embeddings(sequence_length, d):
     return pe
 
 """
-
-def get_positional_embeddings(sequence_length, hidden_dim):
-        # Initialize positional embeddings
-        positional_embeddings = torch.zeros(sequence_length, hidden_dim)
-        for pos in range(sequence_length):
-            for i in range(0, hidden_dim, 2):
-                positional_embeddings[pos, i] = math.sin(pos / (10000 ** (i / hidden_dim)))
-                positional_embeddings[pos, i + 1] = math.cos(pos / (10000 ** (i / hidden_dim)))
-        return positional_embeddings
-
     
 class MyMSA(nn.Module):
     def __init__(self, d, n_heads=2):
@@ -190,9 +190,9 @@ class MyMSA(nn.Module):
                 # Map seq to q, k, v.
                 q, k, v = q_mapping(seq), k_mapping(seq), v_mapping(seq)
 
-                # Compute attention scores. (les 2 prochaines lignes sont faites par chat gpt)
+                # Compute attention scores.
                 attention_scores = (q @ k.T) / (self.d_head ** 0.5)
-                attention = self.softmax(attention_scores) ### WRITE YOUR CODE HERE
+                attention = self.softmax(attention_scores)
                 
                 seq_result.append(attention @ v)
             result.append(torch.hstack(seq_result))
@@ -234,14 +234,14 @@ class MyViT(nn.Module):
 
         #### WRITE YOUR CODE HERE!
 
-        self.chw = chw # (C, H, W)
+        self.chw = chw
         self.n_patches = n_patches
         self.n_blocks = n_blocks
         self.n_heads = n_heads
         self.hidden_d = hidden_d
 
         # Input and patches sizes
-        assert chw[1] % n_patches == 0 # Input shape must be divisible by number of patches
+        assert chw[1] % n_patches == 0
         assert chw[2] % n_patches == 0
         self.patch_size = (chw[1] / n_patches, chw[2] / n_patches)
 
@@ -253,7 +253,6 @@ class MyViT(nn.Module):
         self.class_token = nn.Parameter(torch.rand(1, self.hidden_d))
 
         # Positional embedding
-        # HINT: don't forget the classification token
         self.positional_embeddings = get_positional_embeddings(n_patches ** 2 + 1, hidden_d)
 
         # Transformer blocks
@@ -282,17 +281,17 @@ class MyViT(nn.Module):
         n, c, h, w = x.shape
 
         # Divide images into patches.
-        patches = patchify(x, self.n_patches) ### WRITE YOUR CODE HERE
+        patches = patchify(x, self.n_patches) 
 
         # Map the vector corresponding to each patch to the hidden size dimension.
-        tokens = self.linear_mapper(patches) ### WRITE YOUR CODE HERE
+        tokens = self.linear_mapper(patches)
 
         # Add classification token to the tokens.
         tokens = torch.cat((self.class_token.expand(n, 1, -1), tokens), dim=1)
 
         # Add positional embedding.
         # HINT: use torch.Tensor.repeat(...)
-        out =  out = tokens + self.positional_embeddings.repeat(n, 1, 1) ### WRITE YOUR CODE HERE (line written by chatgpt)
+        out = tokens + self.positional_embeddings.repeat(n, 1, 1)
 
         # Transformer Blocks
         for block in self.blocks:
@@ -302,7 +301,7 @@ class MyViT(nn.Module):
         out = out[:, 0]
 
         # Map to the output distribution.
-        out = self.mlp(out) ### WRITE YOUR CODE HERE
+        out = self.mlp(out)
 
         return out
 
