@@ -72,8 +72,12 @@ def main(args):
 
     # Dimensionality reduction (MS2)
     if args.use_pca:
-        pca_obj = PCA(d=args.pca_d) #pca_d = 300 seems a good tradeof because we have xvar = 95%
+        pca_obj = PCA(d=args.pca_d) #pca_d = 300 seems a good tradeof because we have exvar = 95%
         ### WRITE YOUR CODE HERE: use the PCA object to reduce the dimensionality of the data
+        #initialize principal components and print explained variance
+        exvar = pca_obj.find_principal_components(xtrain)
+        print(f'The total variance explained by the first {args.pca_d} principal components is {exvar:.3f} %')
+        #reduce dimensions
         xtrain = pca_obj.reduce_dimension(xtrain)
         xtest = pca_obj.reduce_dimension(xtest)
         #should obviously not do pca on ytrain/ytest (because it's only a label)

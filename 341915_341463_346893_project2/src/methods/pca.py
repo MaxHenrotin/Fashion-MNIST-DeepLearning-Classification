@@ -80,16 +80,11 @@ class PCA(object):
 
         #### WRITE YOUR CODE HERE!
 
-        #find principal components
-        exvar = self.find_principal_components(data)
-
         #Center the data by subtracting the mean
         centered_data = data - self.mean
         
         #Project the data onto the top 'd' eigenvectors
         data_reduced = np.dot(centered_data, self.W)
-
-        print(f'The total variance explained by the first {self.d} principal components is {exvar:.3f} %')
 
         return data_reduced
         
