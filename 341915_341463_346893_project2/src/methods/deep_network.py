@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
+import math
 
 ## MS2
 
@@ -110,7 +111,110 @@ class CNN(nn.Module):
         preds = self.fc2(preds)
 
         return preds
+    
 
+def patchify(images, n_patches):
+    n, c, h, w = images.shape
+
+    assert h == w # We assume square image.
+
+    patches = torch.zeros(n, n_patches ** 2, h * w * c // n_patches ** 2)
+    patch_size = h // n_patches ### WRITE YOUR CODE HERE
+
+    for idx, image in enumerate(images):
+        for i in range(n_patches):
+            for j in range(n_patches):
+
+                # Extract the patch of the image.
+                patch = image[:, i * patch_size: (i + 1) * patch_size, j * patch_size: (j + 1) * patch_size] ### WRITE YOUR CODE HERE
+
+                # Flatten the patch and store it.
+                patches[idx, i * n_patches + j] = patch.flatten() ### WRITE YOUR CODE HERE
+
+    return patches
+
+def get_positional_embeddings(sequence_length, d):
+    #done by chatgpt
+    """
+    Generate sinusoidal positional embeddings for a sequence.
+    
+    Args:
+    sequence_length (int): the length of the sequence (number of patches + 1 for the class token).
+    d (int): the dimensionality of the embeddings.
+
+    Returns:
+    torch.Tensor: a sequence_length x d dimensional tensor of positional embeddings.
+    """
+    position = torch.arange(sequence_length).unsqueeze(1)
+    div_term = torch.exp(torch.arange(0, d, 2) * -(math.log(10000.0) / d))
+    
+    pe = torch.zeros(sequence_length, d)
+    pe[:, 0::2] = torch.sin(position * div_term)
+    pe[:, 1::2] = torch.cos(position * div_term)
+    
+    return pe
+    
+class MyMSA(nn.Module):
+    def __init__(self, d, n_heads=2):
+        super(MyMSA, self).__init__()
+        self.d = d
+        self.n_heads = n_heads
+
+        assert d % n_heads == 0, f"Can't divide dimension {d} into {n_heads} heads"
+        d_head = int(d / n_heads)
+        self.d_head = d_head
+
+        self.q_mappings = nn.ModuleList([nn.Linear(d_head, d_head) for _ in range(self.n_heads)])
+        self.k_mappings = nn.ModuleList([nn.Linear(d_head, d_head) for _ in range(self.n_heads)])
+        self.v_mappings = nn.ModuleList([nn.Linear(d_head, d_head) for _ in range(self.n_heads)])
+
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, sequences):
+        result = []
+        for sequence in sequences:
+            seq_result = []
+            for head in range(self.n_heads):
+
+                # Select the mapping associated to the given head.
+                q_mapping = self.q_mappings[head]
+                k_mapping = self.k_mappings[head]
+                v_mapping = self.v_mappings[head]
+
+                seq = sequence[:, head * self.d_head: (head + 1) * self.d_head]
+
+                # Map seq to q, k, v.
+                q, k, v = q_mapping(seq), k_mapping(seq), v_mapping(seq) ### WRITE YOUR CODE HERE
+
+                # Compute attention scores. (les 2 prochaines lignes sont faites par chat gpt)
+                attention_scores = (q @ k.transpose(-2, -1)) / (self.d_head ** 0.5)
+                attention = self.softmax(attention_scores) ### WRITE YOUR CODE HERE
+                
+                seq_result.append(attention @ v)
+            result.append(torch.hstack(seq_result))
+        return torch.cat([torch.unsqueeze(r, dim=0) for r in result])
+
+class MyViTBlock(nn.Module):
+    def __init__(self, hidden_d, n_heads, mlp_ratio=4):
+        super(MyViTBlock, self).__init__()
+        self.hidden_d = hidden_d
+        self.n_heads = n_heads
+
+        self.norm1 = nn.LayerNorm(hidden_d) ### WRITE YOUR CODE HERE
+        self.mhsa = MyMSA(hidden_d, n_heads) ### WRITE YOUR CODE HERE
+        self.norm2 = nn.LayerNorm(hidden_d) ### WRITE YOUR CODE HERE
+        self.mlp = nn.Sequential( ### WRITE YOUR CODE HERE
+            nn.Linear(hidden_d, mlp_ratio * hidden_d),
+            nn.GELU(),
+            nn.Linear(mlp_ratio * hidden_d, hidden_d)
+        )
+
+    def forward(self, x):
+        # MHSA + residual connection.
+        out = x + self.mhsa(self.norm1(x))
+        # Feedforward + residual connection
+        out = out + self.mlp(self.norm2(out))
+        return out
 
 class MyViT(nn.Module):
     """
@@ -123,11 +227,41 @@ class MyViT(nn.Module):
         
         """
         super().__init__()
-        ##
-        ###
+
         #### WRITE YOUR CODE HERE!
-        ###
-        ##
+
+        self.chw = chw # (C, H, W)
+        self.n_patches = n_patches
+        self.n_blocks = n_blocks
+        self.n_heads = n_heads
+        self.hidden_d = hidden_d
+
+        # Input and patches sizes
+        assert chw[1] % n_patches == 0 # Input shape must be divisible by number of patches
+        assert chw[2] % n_patches == 0
+        self.patch_size = (chw[1] / n_patches, chw[2] / n_patches) ### WRITE YOUR CODE HERE
+
+        # Linear mapper
+        self.input_d = int(chw[0] * self.patch_size[0] * self.patch_size[1])
+        self.linear_mapper = nn.Linear(self.input_d, self.hidden_d)
+
+        # Learnable classification token
+        self.class_token = nn.Parameter(torch.rand(1, self.hidden_d))
+
+        # Positional embedding
+        # HINT: don't forget the classification token
+        self.positional_embeddings = get_positional_embeddings(n_patches ** 2 + 1, hidden_d)
+
+        # Transformer blocks
+        self.blocks = nn.ModuleList([MyViTBlock(hidden_d, n_heads) for _ in range(n_blocks)])
+
+        # Classification MLP
+        self.mlp = nn.Sequential(
+            nn.Linear(self.hidden_d, out_d),
+            nn.Softmax(dim=-1)
+        )
+
+
 
     def forward(self, x):
         """
@@ -139,11 +273,36 @@ class MyViT(nn.Module):
             preds (tensor): logits of predictions of shape (N, C)
                 Reminder: logits are value pre-softmax.
         """
-        ##
-        ###
+
         #### WRITE YOUR CODE HERE!
-        ###
-        ##
+
+        n, c, h, w = x.shape
+
+        # Divide images into patches.
+        patches = patchify(x, self.n_patches) ### WRITE YOUR CODE HERE
+
+        # Map the vector corresponding to each patch to the hidden size dimension.
+        tokens = self.linear_mapper(patches) ### WRITE YOUR CODE HERE
+
+        # Add classification token to the tokens.
+        tokens = torch.cat((self.class_token.expand(n, 1, -1), tokens), dim=1)
+
+        # Add positional embedding.
+        # HINT: use torch.Tensor.repeat(...)
+        out =  tokens + self.positional_embeddings.unsqueeze(0).expand_as(tokens) ### WRITE YOUR CODE HERE (line written by chatgpt)
+
+        # Transformer Blocks
+        for block in self.blocks:
+            out = block(out)
+
+        # Get the classification token only.
+        out = out[:, 0]
+
+        # Map to the output distribution.
+        out = self.mlp(out) ### WRITE YOUR CODE HERE
+
+        return out
+        
         return preds
 
 
@@ -170,8 +329,8 @@ class Trainer(object):
         self.batch_size = batch_size
 
         self.criterion = nn.CrossEntropyLoss()
-        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        #self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
 
     def train_all(self, dataloader):
         """
