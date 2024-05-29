@@ -100,8 +100,8 @@ def main(args):
     if args.plotting : 
         print("Plotting")
         #lambdas = np.logspace(-3,1,num = 100,endpoint = True)
-        #iters = np.array(1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1)
-        iters = np.array([1e-7,1e-6])
+        iters = np.array([1e-7,5e-7,1e-6,5e-6,1e-5,5e-5,1e-4,5e-4,1e-3,5e-3,1e-2,5e-2,1e-1,5e-1])
+        #iters = np.array([1e-7,5e-7,1e-6,5e-6])
         accuracy_1 = np.zeros(len(iters))
 
         model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
@@ -125,7 +125,7 @@ def main(args):
         # Tracer les données des deux tableaux
         plt.plot(iters, accuracy_1, label='MLP',color = 'b')
         # Set x-axis to log scale
-        plt.xscale('log')
+        #plt.xscale('log')
 
         # Configure the x-axis to display in scientific notation
         plt.gca().xaxis.set_major_formatter(ScalarFormatter())
@@ -133,7 +133,7 @@ def main(args):
         plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.0e}'))
 
 
-        plt.grid(True)
+        #plt.grid(True)
         # Ajouter des étiquettes d'axe et une légende
     
         plt.xlabel('Learning Rate')
