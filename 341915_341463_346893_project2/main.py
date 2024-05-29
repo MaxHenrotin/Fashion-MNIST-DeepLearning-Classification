@@ -110,7 +110,7 @@ def main(args):
 
         for i in range(len(iters)):
 
-            print("On rentre dans la boucle" + str(i))
+            print("Lr : " + str(iters[i]))
 
             method_obj = Trainer(model, lr=iters[i], epochs=55, batch_size=args.nn_batch_size)
             preds_train = method_obj.fit(xtrain, ytrain)
