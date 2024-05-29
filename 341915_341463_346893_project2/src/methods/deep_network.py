@@ -79,7 +79,6 @@ class CNN(nn.Module):
 
         self.conv1 = nn.Conv2d(input_channels,filters[0], kernel_size=conv_kernel_size, stride=stride, padding=padding)
         self.conv2 = nn.Conv2d(filters[0],filters[1], kernel_size=conv_kernel_size, stride=stride, padding=padding)
-        #self.conv3 = nn.Conv2d(filters[1],filters[2], kernel_size=conv_kernel_size, stride=stride, padding=padding)
 
         number_of_pooling = 2
         input_image_size = 28

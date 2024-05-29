@@ -84,7 +84,7 @@ def main(args):
     # Prepare the model (and data) for Pytorch
     # Note: you might need to reshape the data depending on the network you use!
     input_channels = 1  # grayscale images
-    height, width = 28  # MNIST Image dimensions before flattening  # (= int(np.sqrt(xtrain.shape[1])))
+    height, width = 28, 28  # MNIST Image dimensions before flattening  # (= int(np.sqrt(xtrain.shape[1])))
     n_classes = get_n_classes(ytrain)   #number of classes/labels (= 10)
 
     if args.nn_type == "mlp":
@@ -127,8 +127,8 @@ def main(args):
 
     ## As there are no test dataset labels, check your model accuracy on validation dataset.
     # You can check your model performance on test set by submitting your test set predictions on the AIcrowd competition.
-    acc = accuracy_fn(preds, xtest)
-    macrof1 = macrof1_fn(preds, xtest)
+    acc = accuracy_fn(preds, ytest)
+    macrof1 = macrof1_fn(preds, ytest)
     print(f"Validation set:  accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
 
 
