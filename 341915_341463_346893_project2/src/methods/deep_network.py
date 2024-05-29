@@ -135,6 +135,7 @@ def patchify(images, n_patches):
 
     return patches
 
+
 def get_positional_embeddings(sequence_length, hidden_dim):
         # Initialize positional embeddings
         positional_embeddings = torch.zeros(sequence_length, hidden_dim)
@@ -144,19 +145,6 @@ def get_positional_embeddings(sequence_length, hidden_dim):
                 positional_embeddings[pos, i + 1] = math.cos(pos / (10000 ** (i / hidden_dim)))
         return positional_embeddings
 
-"""
-#second version
-def get_positional_embeddings(sequence_length, d):
-    position = torch.arange(sequence_length).unsqueeze(1)
-    div_term = torch.exp(torch.arange(0, d, 2) * -(math.log(10000.0) / d))
-    
-    pe = torch.zeros(sequence_length, d)
-    pe[:, 0::2] = torch.sin(position * div_term)
-    pe[:, 1::2] = torch.cos(position * div_term)
-    
-    return pe
-
-"""
     
 class MyMSA(nn.Module):
     def __init__(self, d, n_heads=2):
@@ -329,8 +317,7 @@ class Trainer(object):
         self.batch_size = batch_size
 
         self.criterion = nn.CrossEntropyLoss()
-        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
     def train_all(self, dataloader):
         """
