@@ -157,8 +157,8 @@ def main(args):
         #reshape xtrain + xtest to size (N, 1, 28, 28)
         xtrain = xtrain.reshape(-1, input_channels, height, width)
         xtest = xtest.reshape(-1, input_channels, height, width)
-        n_patches = 7  #size of the patches that the image is divided into. each patch will be of size 4x4 (since 28/7=4). The number of patches in this case will be 49 (7x7). (7 is good for 28x28 images)
-        n_blocks = 3    #determines the depth of the Transformer, i.e., how many layers of Transformer blocks are stacked. (2 is good to start but could be bigger)
+        n_patches = 14  #size of the patches that the image is divided into. each patch will be of size 4x4 (since 28/7=4). The number of patches in this case will be 49 (7x7). (7 is good for 28x28 images)
+        n_blocks = 4    #determines the depth of the Transformer, i.e., how many layers of Transformer blocks are stacked. (2 is good to start but could be bigger)
         hidden_d = 64    #dimension of the hidden layers within the Transformer blocks (8 is good for 28x28 images)
         n_heads = 4     #number of heads in the multi-head attention mechanism (2 is often a good balance between performance and computational complexity)
         out_d = n_classes   
