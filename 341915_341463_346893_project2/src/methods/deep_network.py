@@ -63,7 +63,7 @@ class CNN(nn.Module):
     It should use at least one convolutional layer.
     """
 
-    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = (32,64),pooling_kernel_size = 2, fc_size = 128, stride = 1):
+    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = (32,64,128),pooling_kernel_size = 2, fc_size = 256, stride = 1):
         """
         Initialize the network.
         
@@ -74,21 +74,26 @@ class CNN(nn.Module):
             input_channels (int): number of channels in the input
             n_classes (int): number of classes to predict
         """
-        super(CNN,self).__init__()
+        super().__init__()
         padding = (conv_kernel_size - 1) // 2 #division entière
         self.pooling_size = pooling_kernel_size
+        self.conv_layers = nn.ModuleList()
 
-        self.conv1 = nn.Conv2d(input_channels,filters[0], kernel_size=conv_kernel_size, stride=stride, padding=padding)
-        self.conv2 = nn.Conv2d(filters[0],filters[1], kernel_size=conv_kernel_size, stride=stride, padding=padding)
-        #self.conv3 = nn.Conv2d(filters[1],filters[2], kernel_size=conv_kernel_size, stride=stride, padding=padding)
 
-        number_of_pooling = 2
+        # Create convolutional layers
+        in_channels = input_channels
+        for out_channels in filters:
+            conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, stride=stride, padding=padding)
+            self.conv_layers.append(conv_layer)
+            in_channels = out_channels
+
+        number_of_pooling = len(filters)
         input_image_size = 28
         conv_image_size = input_image_size // (pooling_kernel_size**number_of_pooling) #division entière
-        size_after_reshape = filters[1] * conv_image_size * conv_image_size
+        size_after_reshape = filters[-1] * conv_image_size * conv_image_size
         self.fc1 = nn.Linear(size_after_reshape, fc_size)  
         self.fc2 = nn.Linear(fc_size, n_classes)
-        #self.dropout = nn.Dropout(0.5)  # Dropout layer
+        self.dropout = nn.Dropout(0.2)  # Dropout layer
 
     def forward(self, x):
         """
@@ -100,13 +105,12 @@ class CNN(nn.Module):
             preds (tensor): logits of predictions of shape (N, C)
                 Reminder: logits are value pre-softmax.
         """
-        preds = F.max_pool2d(F.relu(self.conv1(x)), self.pooling_size)
-        preds = F.max_pool2d(F.relu(self.conv2(preds)), self.pooling_size)
-        #preds = F.max_pool2d(F.relu(self.conv3(preds)), self.pooling_size)
+        preds = x
+        for conv_layer in self.conv_layers:
+            preds = F.max_pool2d(F.relu(conv_layer(preds)), self.pooling_size)
         preds = preds.reshape((preds.shape[0], -1))
         preds = F.relu(self.fc1(preds))
-        #preds = self.dropout(preds)
-        print(preds)
+        preds = self.dropout(preds)
         preds = self.fc2(preds)
 
         return preds
@@ -171,6 +175,7 @@ class Trainer(object):
 
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        #self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
 
     def train_all(self, dataloader):
         """
