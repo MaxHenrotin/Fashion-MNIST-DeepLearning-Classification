@@ -48,10 +48,11 @@ class MLP(nn.Module):
         #### WRITE YOUR CODE HERE!
         ###
         ##
+        h = x.clone()
 
         for layer in self.hidden_layers:
-            x = F.relu(layer(x))
-        preds = self.output_layer(x)
+            h = F.relu(layer(h))
+        preds = self.output_layer(h)
         return preds
 
 

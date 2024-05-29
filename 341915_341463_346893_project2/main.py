@@ -3,6 +3,8 @@ import random
 
 import numpy as np
 from torchinfo import summary
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 
 from src.data import load_data
 from src.methods.pca import PCA
@@ -26,12 +28,11 @@ def main(args):
     xtrain, xtest, ytrain = load_data(args.data) 
     xtrain = xtrain.reshape(xtrain.shape[0], -1)    #images are flatten to a vector
     xtest = xtest.reshape(xtest.shape[0], -1)       #images are flatten to a vector
-
     ## 2. Then we must prepare it. This is were you can create a validation set,
     #  normalize, add bias, etc.
 
     # Make a validation set
-    if not args.test:
+    if not args.test :
     ### WRITE YOUR CODE HERE
 
         # Split the data into training and validation sets
@@ -56,6 +57,10 @@ def main(args):
         #crée les trainingSet
         xtrain = xtrain2[:int(len(xtrain) * split_ratio)]
         ytrain = ytrain2[:int(len(ytrain) * split_ratio)]
+
+
+
+    
 
     ### WRITE YOUR CODE HERE to do any other data processing
 
@@ -86,6 +91,54 @@ def main(args):
     input_channels = 1  # grayscale images
     height, width = 28, 28  # MNIST Image dimensions before flattening  # (= int(np.sqrt(xtrain.shape[1])))
     n_classes = get_n_classes(ytrain)   #number of classes/labels (= 10)
+
+
+    if args.plotting : 
+        print("Plotting")
+        #lambdas = np.logspace(-3,1,num = 100,endpoint = True)
+        #iters = np.array(1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1)
+        iters = np.array([1e-7,1e-6])
+        accuracy_1 = np.zeros(len(iters))
+
+        model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
+        summary(model)
+
+
+        for i in range(len(iters)):
+
+            print("On rentre dans la boucle" + str(i))
+
+            method_obj = Trainer(model, lr=iters[i], epochs=55, batch_size=args.nn_batch_size)
+            preds_train = method_obj.fit(xtrain, ytrain)
+            preds = method_obj.predict(xtest)
+            accuracy_1[i] = accuracy_fn(preds, ytest)
+
+
+        best_it = iters[np.argmax(accuracy_1)]
+        best_it_formatted = format(best_it, ".0e")
+        max_acc = np.max(accuracy_1)
+        plt.scatter(best_it,max_acc,label = f"best learning rate : lr = {best_it_formatted}, accuracy = {max_acc:.3f}%", color = 'r')
+        # Tracer les données des deux tableaux
+        plt.plot(iters, accuracy_1, label='MLP',color = 'b')
+        # Set x-axis to log scale
+        plt.xscale('log')
+
+        # Configure the x-axis to display in scientific notation
+        plt.gca().xaxis.set_major_formatter(ScalarFormatter())
+        plt.gca().xaxis.set_minor_formatter(ScalarFormatter())
+        plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.0e}'))
+
+
+        plt.grid(True)
+        # Ajouter des étiquettes d'axe et une légende
+    
+        plt.xlabel('Learning Rate')
+        plt.ylabel('Accuracy')
+        plt.title('Relation between learning rate and accuracy (max_iters = 55)')
+        plt.legend()
+
+        # Afficher le graphe
+        plt.show()
 
     if args.nn_type == "mlp":
         model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
@@ -156,6 +209,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_iters', type=int, default=100, help="max iters for methods which are iterative")
     parser.add_argument('--test', action="store_true",
                         help="train on whole training data and evaluate on the test data, otherwise use a validation set")
+    
+    parser.add_argument('--plotting',action="store_true", help="Executing the plot")
 
 
     # "args" will keep in memory the arguments and their values,
