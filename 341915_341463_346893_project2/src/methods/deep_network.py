@@ -170,8 +170,7 @@ class Trainer(object):
         self.batch_size = batch_size
 
         self.criterion = nn.CrossEntropyLoss()
-        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
     def train_all(self, dataloader):
         """
