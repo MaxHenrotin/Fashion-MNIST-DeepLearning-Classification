@@ -5,7 +5,7 @@ import numpy as np
 from torchinfo import summary
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
-
+import time
 from src.data import load_data
 from src.methods.pca import PCA
 from src.methods.deep_network import MLP, CNN, Trainer, MyViT
@@ -99,99 +99,85 @@ def main(args):
 
     if args.plotting : 
         print("Plotting")
-        #lambdas = np.logspace(-3,1,num = 100,endpoint = True)
-        iters = np.array([1e-6,5e-6,1e-5,5e-5,1e-4,5e-4,1e-3,5e-3,1e-2,5e-2])
-        #iters = np.array([1e-7,5e-7,1e-6,5e-6])
-        accuracy_1 = np.zeros(len(iters))
+ 
+        #epochs = [1,3,5]
+   
 
-        xtrain = xtrain.reshape(-1, input_channels, height, width)  
-        xtest = xtest.reshape(-1, input_channels, height, width)
-        model = CNN(1, n_classes=n_classes)
-        summary(model)
-
-
-        for i in range(len(iters)):
-
-            print("Lr : " + str(iters[i]))
-
-            method_obj = Trainer(model, lr=iters[i], epochs=1, batch_size=args.nn_batch_size)
-            preds_train = method_obj.fit(xtrain, ytrain)
-            preds = method_obj.predict(xtest)
-            accuracy_1[i] = accuracy_fn(preds, ytest)
-
-
-        best_it = iters[np.argmax(accuracy_1)]
-        best_it_formatted = format(best_it, ".0e")
-        max_acc = np.max(accuracy_1)
-        plt.scatter(best_it,max_acc,label = f"best learning rate : lr = {best_it_formatted}, accuracy = {max_acc:.3f}%", color = 'r')
-        # Tracer les données des deux tableaux
-        plt.plot(iters, accuracy_1, label='CNN',color = 'b')
-        # Set x-axis to log scale
-        plt.xscale('log')
-
-        # Configure the x-axis to display in scientific notation
-        plt.gca().xaxis.set_major_formatter(ScalarFormatter())
-        plt.gca().xaxis.set_minor_formatter(ScalarFormatter())
-        plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.0e}'))
-
-
-        #plt.grid(True)
-        # Ajouter des étiquettes d'axe et une légende
-    
-        plt.xlabel('Learning Rate')
-        plt.ylabel('Accuracy')
-        plt.title('Relation between learning rate and accuracy (max_iters = 5)')
-        plt.legend()
-
-        # Afficher le graphe
-        plt.show()
-
-    if args.nn_type == "mlp":
-        model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
-    if args.nn_type == "cnn":
-        #reshape xtrain + xtest to size (N, 1, 28, 28)
-        xtrain = xtrain.reshape(-1, input_channels, height, width)  
-        xtest = xtest.reshape(-1, input_channels, height, width)
-        model = CNN(input_channels= input_channels ,n_classes=n_classes)  #because we work with black and white images (only one channel and not 3)
-    if args.nn_type == "transformer":
-        #reshape xtrain + xtest to size (N, 1, 28, 28)
+        # Reshape des jeux de données
         xtrain = xtrain.reshape(-1, input_channels, height, width)
         xtest = xtest.reshape(-1, input_channels, height, width)
-        n_patches = 14  #size of the patches that the image is divided into. each patch will be of size 4x4 (since 28/7=4). The number of patches in this case will be 49 (7x7). (7 is good for 28x28 images)
-        n_blocks = 4    #determines the depth of the Transformer, i.e., how many layers of Transformer blocks are stacked. (2 is good to start but could be bigger)
-        hidden_d = 64    #dimension of the hidden layers within the Transformer blocks (8 is good for 28x28 images)
-        n_heads = 4     #number of heads in the multi-head attention mechanism (2 is often a good balance between performance and computational complexity)
-        out_d = n_classes   
-        model = MyViT(chw= (input_channels, height, width), n_patches= n_patches, n_blocks= n_blocks, hidden_d= hidden_d, n_heads= n_heads, out_d= out_d)
+        model = CNN(1, n_classes=n_classes)
+        # Boucle sur chaque combinaison de learning rate et nombre d'epochs
+            
+        summary(model)
+        method_obj = Trainer(model, lr=1e-4, epochs=20, batch_size=args.nn_batch_size)
+        start = time.time() 
+        preds_train = method_obj.fit(xtrain, ytrain)
+        preds = method_obj.predict(xtest)
+        end = time.time()
+        accuracy = accuracy_fn(preds, ytest)
+        runtime = end - start
+        print(f"Accuracy: {accuracy} - Runtime: {runtime}")
+        
+    else: 
+        if args.nn_type == "mlp":
+            model = MLP(input_size=xtrain.shape[1], n_classes=n_classes)
+        if args.nn_type == "cnn":
+            #reshape xtrain + xtest to size (N, 1, 28, 28)
+            xtrain = xtrain.reshape(-1, input_channels, height, width)  
+            xtest = xtest.reshape(-1, input_channels, height, width)
+            if args.filters and args.fc_layers :
+                filters = [int(item) for item in args.filters.split(',')]
+                fc_layers = [int(item) for item in args.fc_layers.split(',')]
+                model = CNN(input_channels= input_channels ,n_classes=n_classes,filters=filters,fc_layers=fc_layers)  #because we work with black and white images(only one channel and not 3)
+            elif args.filters:
+                filters = [int(item) for item in args.filters.split(',')]
+                model = CNN(input_channels= input_channels ,n_classes=n_classes,filters=filters)
+            elif args.fc_layers : 
+                fc_layers = [int(item) for item in args.fc_layers.split(',')]
+                model = CNN(input_channels= input_channels ,n_classes=n_classes,fc_layers=fc_layers)
+            else :
+                model = CNN(input_channels= input_channels ,n_classes=n_classes)
+         
+        if args.nn_type == "transformer":
+            #reshape xtrain + xtest to size (N, 1, 28, 28)
+            xtrain = xtrain.reshape(-1, input_channels, height, width)
+            xtest = xtest.reshape(-1, input_channels, height, width)
+            n_patches = 7  #size of the patches that the image is divided into. each patch will be of size 4x4 (since 28/7=4). The number of patches in this case will be 49 (7x7). (7 is good for 28x28 images)
+            n_blocks = 4    #determines the depth of the Transformer, i.e., how many layers of Transformer blocks are stacked. (2 is good to start but could be bigger)
+            hidden_d = 128    #dimension of the hidden layers within the Transformer blocks (8 is good for 28x28 images)
+            n_heads = 4     #number of heads in the multi-head attention mechanism (2 is often a good balance between performance and computational complexity)
+            out_d = n_classes   
+            model = MyViT(chw= (input_channels, height, width), n_patches= n_patches, n_blocks= n_blocks, hidden_d= hidden_d, n_heads= n_heads, out_d= out_d)
 
-    summary(model)
+        summary(model)
 
-    # Trainer object
-    method_obj = Trainer(model, lr=args.lr, epochs=args.max_iters, batch_size=args.nn_batch_size)
-
-
-    ## 4. Train and evaluate the method
-
-    # Fit (:=train) the method on the training data
-    preds_train = method_obj.fit(xtrain, ytrain)
-
-    # Predict on unseen data
-    preds = method_obj.predict(xtest)
-
-    ## Report results: performance on train and valid/test sets
-    acc = accuracy_fn(preds_train, ytrain)
-    macrof1 = macrof1_fn(preds_train, ytrain)
-    print(f"\nTrain set: accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+        # Trainer object
+        method_obj = Trainer(model, lr=args.lr, epochs=args.max_iters, batch_size=args.nn_batch_size)
 
 
-    ## As there are no test dataset labels, check your model accuracy on validation dataset.
-    # You can check your model performance on test set by submitting your test set predictions on the AIcrowd competition.
-    acc = accuracy_fn(preds, ytest)
-    macrof1 = macrof1_fn(preds, ytest)
-    print(f"Validation set:  accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+        ## 4. Train and evaluate the method
+
+        # Fit (:=train) the method on the training data
+        preds_train = method_obj.fit(xtrain, ytrain)
+
+        # Predict on unseen data
+        preds = method_obj.predict(xtest)
+
+        ## Report results: performance on train and valid/test sets
+        acc = accuracy_fn(preds_train, ytrain)
+        macrof1 = macrof1_fn(preds_train, ytrain)
+        print(f"\nTrain set: accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
 
 
-    ### WRITE YOUR CODE HERE if you want to add other outputs, visualization, etc.
+        ## As there are no test dataset labels, check your model accuracy on validation dataset.
+        # You can check your model performance on test set by submitting your test set predictions on the AIcrowd competition.
+        acc = accuracy_fn(preds, ytest)
+        macrof1 = macrof1_fn(preds, ytest)
+        print(f"Validation set:  accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+
+
+        ### WRITE YOUR CODE HERE if you want to add other outputs, visualization, etc.
 
 
 if __name__ == '__main__':
@@ -217,6 +203,12 @@ if __name__ == '__main__':
                         help="train on whole training data and evaluate on the test data, otherwise use a validation set")
     
     parser.add_argument('--plotting',action="store_true", help="Executing the plot")
+     # Ajout d'un argument pour l'array
+    parser.add_argument('--fc_layers', type=str, 
+                        help="Array of the fully connected layers in the form of a comma-separated string.")
+     # Ajout d'un argument pour l'array
+    parser.add_argument('--filters', type=str, 
+                        help="Array of the convolutional layers in the form of a comma-separated string.")
 
 
     # "args" will keep in memory the arguments and their values,

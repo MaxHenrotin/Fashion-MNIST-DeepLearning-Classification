@@ -64,7 +64,7 @@ class CNN(nn.Module):
     It should use at least one convolutional layer.
     """
 
-    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = (32,64),pooling_kernel_size = 2, fc_size = 128, stride = 1):
+    def __init__(self, input_channels, n_classes, conv_kernel_size = 3,filters = [16,32,64],pooling_kernel_size = 2, fc_layers = [64], stride = 1):
         """
         Initialize the network.
         
@@ -76,25 +76,31 @@ class CNN(nn.Module):
             n_classes (int): number of classes to predict
         """
         super().__init__()
-        padding = (conv_kernel_size - 1) // 2 #division entière
+        padding = (conv_kernel_size - 1) // 2 
         self.pooling_size = pooling_kernel_size
         self.conv_layers = nn.ModuleList()
-
 
         # Create convolutional layers
         in_channels = input_channels
         for out_channels in filters:
             conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size=conv_kernel_size, stride=stride, padding=padding)
             self.conv_layers.append(conv_layer)
-            in_channels = out_channels
+            in_channels = out_channels   
 
+        # Calculate the size of the image after the convolutional layers
         number_of_pooling = len(filters)
         input_image_size = 28
-        conv_image_size = input_image_size // (pooling_kernel_size**number_of_pooling) #division entière
-        size_after_reshape = filters[-1] * conv_image_size * conv_image_size
-        self.fc1 = nn.Linear(size_after_reshape, fc_size)  
-        self.fc2 = nn.Linear(fc_size, n_classes)
-        #self.dropout = nn.Dropout(0.2)  # Dropout layer
+        conv_image_size = input_image_size // (pooling_kernel_size**number_of_pooling)
+        size_after_reshape =  filters[-1] * conv_image_size * conv_image_size
+
+        # Fully connected layers
+        self.fc_layers = nn.ModuleList()
+        input_size = size_after_reshape
+        for size in fc_layers:
+            self.fc_layers.append(nn.Linear(input_size, size))
+            input_size = size
+        #Final layer
+        self.fc_layers.append(nn.Linear(input_size, n_classes))
 
     def forward(self, x):
         """
@@ -106,13 +112,20 @@ class CNN(nn.Module):
             preds (tensor): logits of predictions of shape (N, C)
                 Reminder: logits are value pre-softmax.
         """
-        preds = x
+        preds = x.clone()
+        #Aply pooling after each convolutional layer
         for conv_layer in self.conv_layers:
             preds = F.max_pool2d(F.relu(conv_layer(preds)), self.pooling_size)
+
+        #Reshape the tensor to be able to apply the fully connected layers
         preds = preds.reshape((preds.shape[0], -1))
-        preds = F.relu(self.fc1(preds))
-        #preds = self.dropout(preds)
-        preds = self.fc2(preds)
+
+        #Fully connected layers with ReLU activation
+        for fc in self.fc_layers[:-1]:
+            preds = F.relu(fc(preds))
+
+        #Last fully connected layer to get the logits
+        preds = self.fc_layers[-1](preds)
 
         return preds
     
