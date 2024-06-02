@@ -57,9 +57,6 @@ def main(args):
         #crée les trainingSet
         xtrain = xtrain2[:int(len(xtrain) * split_ratio)]
         ytrain = ytrain2[:int(len(ytrain) * split_ratio)]
-
-
-
     
 
     ### WRITE YOUR CODE HERE to do any other data processing
@@ -101,7 +98,6 @@ def main(args):
         print("Plotting")
  
         #epochs = [1,3,5]
-   
 
         # Reshape des jeux de données
         xtrain = xtrain.reshape(-1, input_channels, height, width)
@@ -143,9 +139,9 @@ def main(args):
             #reshape xtrain + xtest to size (N, 1, 28, 28)
             xtrain = xtrain.reshape(-1, input_channels, height, width)
             xtest = xtest.reshape(-1, input_channels, height, width)
-            n_patches = 7  #size of the patches that the image is divided into. each patch will be of size 4x4 (since 28/7=4). The number of patches in this case will be 49 (7x7). (7 is good for 28x28 images)
+            n_patches = 14  #size of the patches that the image is divided into. each patch will be of size 4x4 (since 28/7=4). The number of patches in this case will be 49 (7x7). (7 is good for 28x28 images)
             n_blocks = 4    #determines the depth of the Transformer, i.e., how many layers of Transformer blocks are stacked. (2 is good to start but could be bigger)
-            hidden_d = 128    #dimension of the hidden layers within the Transformer blocks (8 is good for 28x28 images)
+            hidden_d = 64    #dimension of the hidden layers within the Transformer blocks (8 is good for 28x28 images)
             n_heads = 4     #number of heads in the multi-head attention mechanism (2 is often a good balance between performance and computational complexity)
             out_d = n_classes   
             model = MyViT(chw= (input_channels, height, width), n_patches= n_patches, n_blocks= n_blocks, hidden_d= hidden_d, n_heads= n_heads, out_d= out_d)
