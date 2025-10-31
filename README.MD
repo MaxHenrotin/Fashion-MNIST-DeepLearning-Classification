@@ -8,6 +8,8 @@ This project implements a deep learning system in Python using PyTorch to classi
 
 To improve efficiency, **PCA (Principal Component Analysis)** was applied for input dimensionality reduction, accelerating MLP training. The workflow covers **data preprocessing, model training with the Adam optimizer, hyperparameter tuning, and performance evaluation** across all models.
 
+Please refer to `report.pdf` for full details of our work.
+
 ## How to Run
 
 Make sure the data is placed in the `dataset/` directory, that need to be created by extracting the dataset.zip file in its current location. And then run the code :
